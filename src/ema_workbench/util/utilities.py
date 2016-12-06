@@ -143,7 +143,7 @@ def load_EMA_results(path):
             outcomes[f.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(f,
                                                             header=None)#.as_matrix()
         except:
-            print f
+            print (f)
     experiments_path = filter(lambda x: ('experiments'  in x ),
                     list_files(path))
     
