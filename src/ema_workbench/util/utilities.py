@@ -132,7 +132,51 @@ def load_results(file_name):
             
     info("results loaded succesfully from {}".format(file_name))
     return experiments, outcomes
+  
+def load_EMA_results(path):
+    outcomeslist = filter(lambda x: ('experiment'  not in x 
+                               and  "outcome"  not in x ),
+                    list_files(path))
+    outcomes = {}
+    for f in outcomeslist:
+        try:
+            outcomes[f.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(f,
+                                                            header=None)#.as_matrix()
+        except:
+            print f
+    experiments_path = filter(lambda x: ('experiments'  in x ),
+                    list_files(path))
+    
+    experiments = pd.read_csv(filter(lambda x: 'metadata' not in x, experiments_path)[0])
+    
+    # Load Experiment Metadata
+    f = open(filter(lambda x: 'metadata' in x, experiments_path)[0], "r")
+    metadata = f.readlines()
+    f.close()
+    experiments = experiments.to_records()
+    experiments = recfunctions.drop_fields(experiments, ['index'])
 
+    metadata_temp = []
+    for entry in metadata:
+        entry = entry.decode('UTF-8')
+        entry = entry.strip()
+        entry = entry.split(",")
+        entry = [str(item) for item in entry]
+        entry = tuple(entry)
+        metadata_temp.append(entry)
+    metadata = metadata_temp    
+
+    metadata = np.dtype(metadata)
+
+    # cast experiments to dtype and name specified in metadata        
+    temp_experiments = np.zeros((experiments.shape[0],), dtype=metadata)
+    for i, entry in enumerate(experiments.dtype.descr):
+        dtype = metadata[i]
+        name = metadata.descr[i][0]
+        temp_experiments[name][:] = experiments[entry[0]].astype(dtype)
+    experiments = temp_experiments
+    results = experiments, outcomes
+    return results
 
 def save_results(results, file_name):
     '''
@@ -203,9 +247,67 @@ def save_results(results, file_name):
                 save_numpy_array(fh, value)
                 fh = fh.getvalue()
                 add_file(z, fh, '{}.csv'.format(key))
-  
     info("results saved successfully to {}".format(file_name))
     
+def save_EMA_results(results, file_name):
+    '''
+    save the results to the specified tar.gz file. The results are stored as 
+    csv files. There is an x.csv, and a csv for each outcome. In 
+    addition, there is a metadata csv which contains the datatype information
+    for each of the columns in the x array.
+
+    Parameters
+    ----------    
+    results : tuple
+              the return of run_experiments
+    file_name : str
+                the path of the file
+    
+    Raises
+    ------
+    IOError if file not found
+
+    '''
+
+    def add_file(tararchive, string_to_add, filename):
+        tarinfo = tarfile.TarInfo(filename)
+        tarinfo.size = len(string_to_add)
+        
+        fh = BytesIO(string_to_add.encode('UTF-8'))
+        
+        z.addfile(tarinfo, fh)  
+    
+    def save_numpy_array(fh, data):
+        data = pd.DataFrame(data)
+        data.to_csv(fh, header=False, index=False, encoding='UTF-8')
+    
+    try: 
+        os.makedirs(file_name)
+    except OSError:
+        if not os.path.isdir(file_name):
+            raise
+    
+    experiments, outcomes = results
+    # write the x to the zipfile
+    experiment.to_csv(file_name+'/experiments.csv')
+
+    # write experiment metadata
+    dtype = experiments.dtype.descr
+    dtype = ["{},{}".format(*entry) for entry in dtype]
+    dtype = "\n".join(dtype)
+    dtype.to_csv(file_name+'/experiments metadata.csv')
+    
+    # write outcome metadata
+    outcome_names = outcomes.keys()
+    outcome_meta = ["{},{}".format(outcome, outcomes[outcome].shape) 
+                    for outcome in outcome_names]
+    outcome_meta = "\n".join(outcome_meta)
+    outcome_meta.to_csv(file_name+"outcomes metadata.csv")
+
+    # outcomes
+    for key, value in outcomes.items():
+    value.to_csv(file_name+'{}.csv'.format(key))
+    info("results saved successfully to {}".format(file_name))
 
 def experiments_to_cases(experiments):
     '''
