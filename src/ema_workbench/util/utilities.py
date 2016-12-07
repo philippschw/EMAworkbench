@@ -17,6 +17,7 @@ import math
 import os
 import sys
 import tarfile
+import csv
 
 from matplotlib.mlab import rec2csv
 import numpy as np
@@ -41,7 +42,9 @@ else:
 __all__ = ['load_results',
            'save_results',
            'experiments_to_cases',
-           'merge_results'
+           'merge_results',
+           'save_EMA_results',
+           'load_EMA_results'
            ]
 
 
@@ -288,25 +291,33 @@ def save_EMA_results(results, file_name):
             raise
     
     experiments, outcomes = results
-    # write the x to the zipfile
-    experiment.to_csv(file_name+'/experiments.csv')
+    
+    # write experiment 
+    experiment_df = pd.DataFrame(experiments)
+    experiment_df.to_csv(file_name+'/experiments.csv', index=False)
 
     # write experiment metadata
     dtype = experiments.dtype.descr
-    dtype = ["{},{}".format(*entry) for entry in dtype]
-    dtype = "\n".join(dtype)
-    dtype.to_csv(file_name+'/experiments metadata.csv')
+    dtype = pd.DataFrame(dtype)
+    dtype.to_csv(file_name+'/experiments metadata.csv', index=False, 
+                header=False)
     
     # write outcome metadata
     outcome_names = outcomes.keys()
-    outcome_meta = ["{},{}".format(outcome, outcomes[outcome].shape) 
+    outcome_meta = [[outcome, outcomes[outcome].shape] 
                     for outcome in outcome_names]
-    outcome_meta = "\n".join(outcome_meta)
-    outcome_meta.to_csv(file_name+"outcomes metadata.csv")
+                    
+    df = pd.DataFrame(outcome_meta)                    
+    df[1]= df[1].map(lambda x: str(x))
+    df['a'], df['b'] =  zip(*df[1].apply(lambda x: x.split(',')))
+    del df[1]
+    df.to_csv(file_name+"/outcomes metadata.csv", 
+                        header=False, index=False)
 
-    # outcomes
+    # write outcomes
     for key, value in outcomes.items():
-        value.to_csv(file_name+'{}.csv'.format(key))
+        pd.DataFrame(value).to_csv(file_name+'/{}.csv'.format(key), header=False,
+                                    index=False)
     info("results saved successfully to {}".format(file_name))
 
 def experiments_to_cases(experiments):
