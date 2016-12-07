@@ -285,7 +285,7 @@ def save_EMA_results(results, file_name):
         data.to_csv(fh, header=False, index=False, encoding='UTF-8')
     
     try: 
-        os.makedirs(file_name)
+        os.makedirs(file_name, exist_ok=True)
     except OSError:
         if not os.path.isdir(file_name):
             raise
