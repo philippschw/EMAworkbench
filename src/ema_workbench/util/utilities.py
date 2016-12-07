@@ -260,7 +260,7 @@ def save_results(results, file_name):
                 add_file(z, fh, '{}.csv'.format(key))
     info("results saved successfully to {}".format(file_name))
     
-def save_EMA_results(results, file_name, reduce=None):
+def save_EMA_results(results, file_name, array_index_select=None):
     '''
     save the results to the specified tar.gz file. The results are stored as 
     csv files. There is an x.csv, and a csv for each outcome. In 
@@ -328,13 +328,12 @@ def save_EMA_results(results, file_name, reduce=None):
                                     index=False)
 
     # write resampled outcomes
-    if array_agg_monthly is not None:
+    if array_index_select is not None:
         for key, value in outcomes.items():
             df = pd.DataFrame(value)
-            df = df.loc[array_agg_monthly]
+            df = df[array_index_select]
             df.reset_index(drop=True, inplace=True)
-            df.to_csv(file_name+'/{}_.csv'.format(key), header=False,
-                                        index=False)
+            df.to_csv(file_name+'/{}_.csv'.format(key), header=False,index=False)
 
     info("results saved successfully to {}".format(file_name))
 
