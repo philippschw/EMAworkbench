@@ -291,11 +291,11 @@ def save_EMA_results(results, file_name):
     def save_numpy_array(fh, data):
         data = pd.DataFrame(data)
         data.to_csv(fh, header=False, index=False, encoding='UTF-8')
-    
+
     if PY3:
         os.makedirs(file_name, exist_ok=True)
     else:
-        os.makedirs(filename)
+        os.makedirs(file_name)
     
     experiments, outcomes = results
     
