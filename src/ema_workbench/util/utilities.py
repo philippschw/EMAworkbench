@@ -18,6 +18,7 @@ import os
 import sys
 import tarfile
 import csv
+import glob
 
 from matplotlib.mlab import rec2csv
 import numpy as np
@@ -135,25 +136,29 @@ def load_results(file_name):
             
     info("results loaded succesfully from {}".format(file_name))
     return experiments, outcomes
-  
+
+def list_files(path):
+    ''' List all files in specified path '''
+    list_of_files = [f for f in glob.glob(path+'/*.csv')]
+    return list_of_files
+
 def load_EMA_results(path):
-    outcomeslist = filter(lambda x: ('experiment'  not in x 
-                               and  "outcome"  not in x ),
-                    list_files(path))
+    print (list_files(path))
+
+    def f(x): return 'experiment' not in x and  "outcome"  not in  x
+    outcomeslist = [i for i in list_files(path) if f(i)]
+    print (outcomeslist)
+
+    # Load Experiments
     outcomes = {}
-    for f in outcomeslist:
-        try:
-            outcomes[f.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(f,
-                                                            header=None)#.as_matrix()
-        except:
-            print (f)
-    experiments_path = filter(lambda x: ('experiments'  in x ),
-                    list_files(path))
-    
-    experiments = pd.read_csv(filter(lambda x: 'metadata' not in x, experiments_path)[0])
-    
+    for outcome in outcomeslist:
+        outcomes[outcome.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(outcome, header=None).as_matrix()
+
+    # Load Experiments
+    experiments = pd.read_csv(path+'/experiments.csv')
+
     # Load Experiment Metadata
-    f = open(filter(lambda x: 'metadata' in x, experiments_path)[0], "r")
+    f = open(path+'/experiments metadata.csv', "r")
     metadata = f.readlines()
     f.close()
     experiments = experiments.to_records()
@@ -161,7 +166,10 @@ def load_EMA_results(path):
 
     metadata_temp = []
     for entry in metadata:
-        entry = entry.decode('UTF-8')
+        try:
+            entry = entry.decode('UTF-8')
+        except:
+            pass
         entry = entry.strip()
         entry = entry.split(",")
         entry = [str(item) for item in entry]
@@ -284,7 +292,7 @@ def save_EMA_results(results, file_name):
         data = pd.DataFrame(data)
         data.to_csv(fh, header=False, index=False, encoding='UTF-8')
     
-    try: 
+    try:
         os.makedirs(file_name, exist_ok=True)
     except OSError:
         if not os.path.isdir(file_name):
