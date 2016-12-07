@@ -292,11 +292,10 @@ def save_EMA_results(results, file_name):
         data = pd.DataFrame(data)
         data.to_csv(fh, header=False, index=False, encoding='UTF-8')
     
-    try:
+    if PY3:
         os.makedirs(file_name, exist_ok=True)
-    except OSError:
-        if not os.path.isdir(file_name):
-            raise
+    else:
+        os.makedirs(filename)
     
     experiments, outcomes = results
     
