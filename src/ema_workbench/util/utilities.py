@@ -306,7 +306,7 @@ def save_EMA_results(results, file_name):
 
     # outcomes
     for key, value in outcomes.items():
-    value.to_csv(file_name+'{}.csv'.format(key))
+        value.to_csv(file_name+'{}.csv'.format(key))
     info("results saved successfully to {}".format(file_name))
 
 def experiments_to_cases(experiments):
