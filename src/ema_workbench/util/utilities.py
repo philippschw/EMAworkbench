@@ -142,23 +142,35 @@ def list_files(path):
     list_of_files = [f for f in glob.glob(path+'/*.csv')]
     return list_of_files
 
+def hasNumbers(inputString):
+    return any(char.isdigit() for char in inputString)
+  
 def load_EMA_results(path):
-    print (list_files(path))
+    def f(x):
+        return 'experiment' not in x and "outcome" not in x
 
-    def f(x): return 'experiment' not in x and  "outcome"  not in  x
-    outcomeslist = [i for i in list_files(path) if f(i)]
-    print (outcomeslist)
+    completeoutlist = [i for i in list_files(path) if f(i)]
+    outcomeslist = [i for i in completeoutlist if hasNumbers(i.rsplit('/', 1)[-1]) == True]
 
-    # Load Experiments
+    outcomesreducedlist = [i for i in completeoutlist
+                           if i.rsplit('/', 1)[-1].rsplit('.')[0][-1] == '_']
+
+    outcomeslonglist = list(set(outcomeslist) - set(outcomesreducedlist))
+
+    # Load Outcomes
     outcomes = {}
-    for outcome in outcomeslist:
+    for outcome in outcomeslonglist:
         outcomes[outcome.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(outcome, header=None).as_matrix()
 
+    outcomesreduced = {}
+    for outcome in outcomesreducedlist:
+        outcomesreduced[outcome.rsplit('/', 1)[-1].rsplit('.')[0]] = pd.read_csv(outcome, header=None).as_matrix()
+
     # Load Experiments
-    experiments = pd.read_csv(path+'/experiments.csv')
+    experiments = pd.read_csv(path + '/experiments.csv')
 
     # Load Experiment Metadata
-    f = open(path+'/experiments metadata.csv', "r")
+    f = open(path + '/experiments metadata.csv', "r")
     metadata = f.readlines()
     f.close()
     experiments = experiments.to_records()
@@ -175,11 +187,11 @@ def load_EMA_results(path):
         entry = [str(item) for item in entry]
         entry = tuple(entry)
         metadata_temp.append(entry)
-    metadata = metadata_temp    
+    metadata = metadata_temp
 
     metadata = np.dtype(metadata)
 
-    # cast experiments to dtype and name specified in metadata        
+    # cast experiments to dtype and name specified in metadata
     temp_experiments = np.zeros((experiments.shape[0],), dtype=metadata)
     for i, entry in enumerate(experiments.dtype.descr):
         dtype = metadata[i]
@@ -187,7 +199,8 @@ def load_EMA_results(path):
         temp_experiments[name][:] = experiments[entry[0]].astype(dtype)
     experiments = temp_experiments
     results = experiments, outcomes
-    return results
+    resultsreduced = experiments, outcomesreduced
+    return {"results": results, 'resultsreduced': resultsreduced}
 
 def save_results(results, file_name):
     '''
